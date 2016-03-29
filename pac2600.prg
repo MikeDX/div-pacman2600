@@ -11,12 +11,16 @@ program pac2600;
 
 global sounds[10];
 player=0;
+start=0;
+playing=false;
 
 BEGIN
 
 load_fpg("pac2600.fpg");
 sounds[0]=load_wav("sounds/CHOMP.wav",0);
 sounds[1]=load_wav("sounds/BOOP.wav",0);
+sounds[2]=load_wav("sounds/START.wav",0);
+
 put_screen(file,100);
 set_fps(60,0);
 LOOP
@@ -94,8 +98,13 @@ write_int(0,0,0,0,&p);
 write_int(0,10,0,0,&dx);
 write_int(0,20,0,0,&dy);
 
+start = sound(sounds[2],255,255);
+
 
 loop
+if(playing==true || !is_playing_sound(start))
+playing=true;
+
 
 ox=x;
 oy=y;
@@ -143,6 +152,8 @@ else
         dx=0;
         dy=0;
     end
+end
+
 end
 
 if(anim++>10)
