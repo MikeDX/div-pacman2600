@@ -10,21 +10,25 @@ Started: 29/03/2015 20:26
 program pac2600;
 
 global sounds[10];
-
+player=0;
 
 BEGIN
 
 load_fpg("pac2600.fpg");
 sounds[0]=load_wav("sounds/CHOMP.wav",0);
-
+sounds[1]=load_wav("sounds/BOOP.wav",0);
 put_screen(file,100);
 set_fps(60,0);
-maze();
 LOOP
+maze();
+frame;
 
+WHILE(get_id(type wafer) || get_id(type powerpill))
 FRAME;
 
 END
+
+end
 
 end
 
@@ -54,7 +58,7 @@ powerpill(px,py);
 end
 
 get_point(file,101,5,&px, &py);
-pac(px,py);
+player=pac(px,py);
 
 
 
@@ -91,11 +95,14 @@ dx=0;
 dy=0;
 ody=0;
 odx=0;
+anim=0;
+animf=0;
+frames[]=1,2,3,2;
 
 BEGIN
 y++;
 x--;
-graph=1;
+graph=frames[0];
 write_int(0,0,0,0,&p);
 write_int(0,10,0,0,&dx);
 write_int(0,20,0,0,&dy);
@@ -151,6 +158,16 @@ else
     end
 end
 
+if(anim++>10)
+anim=0;
+animf++;
+if(animf==4)
+animf=0;
+end
+graph=frames[animf];
+
+end
+
 frame;
 
 end
@@ -176,7 +193,10 @@ size=100*((timer/20)&1);
 
 frame;
 
-until(collision(type pac));
+until(abs(x-player.x)<2 && abs(y-player.y)<2)
+//collision(player));
+
+sound(sounds[1],255,255);
 
 
 END
