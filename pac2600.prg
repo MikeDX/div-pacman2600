@@ -6,17 +6,19 @@ Remake using DIV Games studio
 
 Started: 29/03/2015 20:26
 
-
-
 ***/
 program pac2600;
+
+global sounds[10];
+
 
 BEGIN
 
 load_fpg("pac2600.fpg");
+sounds[0]=load_wav("sounds/CHOMP.wav",0);
 
 put_screen(file,100);
-
+set_fps(60,0);
 maze();
 LOOP
 
@@ -51,6 +53,10 @@ get_point(file,101,x,&px,&py);
 powerpill(px,py);
 end
 
+get_point(file,101,5,&px, &py);
+pac(px,py);
+
+
 
 END
 
@@ -61,19 +67,93 @@ BEGIN
 graph=20;
 
 
-loop
+repeat
 
 frame;
 
-end
+until (collision(type pac));
+
+sound(sounds[0],255,255);
 
 
 END
 
 
-PROCESS pac()
+PROCESS pac(x,y)
+
+private
+p;
+ox;
+oy;
+nx=0;
+ny=0;
+dx=0;
+dy=0;
+ody=0;
+odx=0;
 
 BEGIN
+y++;
+x--;
+graph=1;
+write_int(0,0,0,0,&p);
+write_int(0,10,0,0,&dx);
+write_int(0,20,0,0,&dy);
+
+
+loop
+
+ox=x;
+oy=y;
+
+if(key(_left))
+x-=2;
+nx=-2;
+ny=0;
+end
+
+if(key(_right))
+x+=2;
+nx=2;
+ny=0;
+
+end
+
+if(key(_up))
+y-=2;
+ny=-2;
+nx=0;
+end
+
+if(key(_down))
+y+=2;
+ny=2;
+nx=0;
+end
+
+p=map_get_pixel(file,101,x,y-1);
+
+if((x!=ox || y!=oy) && p==22)
+    dx=nx;
+    dy=ny;
+else
+    x=ox;
+    y=oy;
+    x=x+dx;
+    y=y+dy;
+    p=map_get_pixel(file,101,x,y-1);
+
+    if(p!=22)
+        x=ox;
+        y=oy;
+        dx=0;
+        dy=0;
+    end
+end
+
+frame;
+
+end
 
 
 
@@ -90,13 +170,13 @@ PROCESS powerpill(x,y)
 BEGIN
 graph=21;
 
-loop
+repeat
 
-size=100*(timer&1);
+size=100*((timer/20)&1);
 
 frame;
 
-end
+until(collision(type pac));
 
 
 END
