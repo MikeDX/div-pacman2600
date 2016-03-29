@@ -60,27 +60,14 @@ end
 get_point(file,101,5,&px, &py);
 player=pac(px,py);
 
+get_point(file,101,7,&px, &py);
+from x = 1 to 4;
+ghost(px,py);
+end
 
 
 END
 
-PROCESS wafer(x,y)
-
-BEGIN
-
-graph=20;
-
-
-repeat
-
-frame;
-
-until (collision(type pac));
-
-sound(sounds[0],255,255);
-
-
-END
 
 
 PROCESS pac(x,y)
@@ -180,7 +167,31 @@ PROCESS ghost(x,y);
 
 BEGIN
 
+graph=30;
+loop
+frame;
+end
+
 END
+
+PROCESS wafer(x,y)
+
+BEGIN
+
+    graph=20;
+
+    REPEAT
+
+FRAME;
+
+until (player.y-1==y && abs(player.x-(x+4))<5)
+
+sound(sounds[0],255,255);
+
+
+END
+
+
 
 PROCESS powerpill(x,y)
 
