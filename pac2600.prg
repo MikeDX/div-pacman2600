@@ -21,6 +21,10 @@ numghosts=4;
 flicker=1;
 demo=1;
 lives=0;
+ghostpoints=0;
+res=-1;
+cart=0;
+
 local
 p=0;
 ox=0;
@@ -36,7 +40,24 @@ animf=0;
 eyes=false;
 BEGIN
 
+
+cart=load_map("gfx/cart.pcx");
+graph=cart;
+x=160;
+y=100;
+//put_screen(file,cart);
+frame(10000);
+fade(0,0,0,10);
+while(fading)
+frame;
+end
+
+graph=0;
+
 load_fpg("pac2600.fpg");
+fade(100,100,100,10);
+define_region(1,0,0,320,168);
+
 sounds[0]=load_wav("sounds/CHOMP.wav",0);
 sounds[1]=load_wav("sounds/BOOP.wav",0);
 sounds[2]=load_wav("sounds/START.wav",0);
@@ -44,6 +65,7 @@ sounds[3]=load_wav("sounds/DEATH.wav",0);
 sounds[4]=load_wav("sounds/beeew.wav",1);
 sounds[5]=load_wav("sounds/BUP_BWOOP.wav",0);
 sounds[6]=load_wav("sounds/WHISTLE.wav",0);
+set_mode(320200);
 
 put_screen(file,100);
 set_fps(60,0);
@@ -103,13 +125,7 @@ py;
 
 
 BEGIN
-/*
-signal(type ghost, s_kill);
-signal(type wafer, s_kill);
-signal(type powerpill, s_kill);
-signal(type pac, s_kill);
-signal(type bonus, s_kill);
-*/
+
 // setup wafers
 FROM x = 9 to 134;
     get_point(file,101,x,&px, &py);
@@ -159,7 +175,7 @@ LOOP
 
     signal(type ghost, s_kill);
     signal(type pac, s_kill);
-    debug;
+
     lives--;
     if(lives<0)
         demo=1;
@@ -182,7 +198,8 @@ BEGIN
 y++;
 x--;
 graph=frames[0];
-
+//resolution=res;
+region=1;
 FRAME(6000);
 
 start = sound(sounds[2],255,255);
@@ -220,8 +237,7 @@ LOOP
         END
 
         p=map_get_pixel(file,101,x,y-1);
-
-        IF((x!=ox || y!=oy) && p!=0 & p!=39)
+        IF((x!=ox || y!=oy) && p!=0 && p!=39 && y>2 && y<200)
             dx=nx;
             dy=ny;
         ELSE
@@ -231,12 +247,26 @@ LOOP
             y=y+dy;
             p=map_get_pixel(file,101,x,y-1);
 
+            if(dx==0 && dy!=0 && (y<2 || y>190))
+
+            if(y>200)
+                y=-20;
+            end
+
+            if(y<-20)
+                y=200;
+            end
+
+            else
+
             IF(p==0 || p==39)
                 x=ox;
                 y=oy;
                 dx=0;
                 dy=0;
             END
+            end
+
         END
 
     END
@@ -253,7 +283,7 @@ LOOP
 
     END
     g=collision(type ghost);
-    IF(g)
+    IF(g && y>0 && y<168)
         if(g.eyes==false)
         IF(powertime<1)
             playing=false;
@@ -268,6 +298,9 @@ LOOP
             g.eyes=true;
             playing=false;
             eatsound=sound(sounds[5],255,255);
+            score+=ghostpoints;
+            ghostpoints*=2;
+
             WHILE(is_playing_sound(eatsound))
             IF(anim++>10)
                 anim=0;
@@ -315,6 +348,8 @@ BEGIN
     dx=1;
     graph=30;
 
+    resolution=res;
+    region=1;
 
     LOOP
 
@@ -491,7 +526,7 @@ PROCESS wafer(x,y)
 BEGIN
 
     graph=20;
-
+    resolution = res;
     REPEAT
 
         FRAME;
@@ -510,7 +545,7 @@ PROCESS powerpill(x,y)
 
 BEGIN
 graph=21;
-
+resolution=res;
 REPEAT
 
     size=100*((timer/20)&1);
@@ -522,8 +557,8 @@ UNTIL(abs(x-player.x)<2 && abs(y-player.y)<2)
 stop_sound(powersound);
 
 sound(sounds[1],255,255);
-score+=10;
-
+score+=5;
+ghostpoints=20;
 powersound=sound(sounds[4],255,255);
 powertime=600;
 
