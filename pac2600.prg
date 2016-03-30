@@ -16,6 +16,19 @@ playing=false;
 score=0;
 gactive=0;
 
+local
+p=0;
+ox=0;
+oy=0;
+nx=0;
+ny=0;
+dx=0;
+dy=0;
+ody=0;
+odx=0;
+anim=0;
+animf=0;
+
 BEGIN
 
 load_fpg("pac2600.fpg");
@@ -26,33 +39,37 @@ sounds[3]=load_wav("sounds/DEATH.wav",0);
 
 put_screen(file,100);
 set_fps(60,0);
-LOOP
-playing=false;
-maze();
-frame;
 
-WHILE(get_id(type wafer) || get_id(type powerpill))
-FRAME;
-gactive++;
-if(gactive==4)
-gactive=0;
-end
+LOOP
+    playing=false;
+    maze();
+    frame;
+
+    WHILE(get_id(type wafer) || get_id(type powerpill))
+        FRAME;
+        gactive++;
+        if(gactive==4)
+            gactive=0;
+    END
 
 END
+
 signal(type maze, s_kill_tree);
 
-end
+END
 
-end
+END
+
+
 
 PROCESS maze()
 
-private
+PRIVATE
 px;
 py;
 
 
-begin
+BEGIN
 
 signal(type ghost, s_kill);
 signal(type wafer, s_kill);
@@ -60,35 +77,38 @@ signal(type powerpill, s_kill);
 signal(type pac, s_kill);
 signal(type bonus, s_kill);
 
-from x = 9 to 134;
-get_point(file,101,x,&px, &py);
-wafer(px,py);
-end
+// setup wafers
+FROM x = 9 to 134;
+    get_point(file,101,x,&px, &py);
+    wafer(px,py);
+END
 
-from x = 1 to 4;
-get_point(file,101,x,&px,&py);
-powerpill(px,py);
+// setup powerpills
+FROM x = 1 to 4;
+    get_point(file,101,x,&px,&py);
+    powerpill(px,py);
 end
 
 LOOP
 
-get_point(file,101,5,&px, &py);
-player=pac(px,py);
+    // position pacman
+    get_point(file,101,5,&px, &py);
+    player=pac(px,py);
 
-get_point(file,101,7,&px, &py);
-from x = 1 to 4;
-ghost(px,py,x-1);
-end
+    // position ghosts
+    get_point(file,101,7,&px, &py);
+
+    FROM x = 1 to 4;
+        ghost(px,py,x-1);
+    END
 
 
-while(get_id(type pac))
-FRAME;
-END
+    WHILE(get_id(type pac))
+        FRAME;
+    END
 
-//get_point(file,101,5,&px, &py);
-//player=pac(px,py);
-signal(type ghost, s_kill);
-signal(type pac, s_kill);
+    signal(type ghost, s_kill);
+    signal(type pac, s_kill);
 
 END
 
@@ -99,211 +119,189 @@ END
 
 PROCESS pac(x,y)
 
-private
-p;
-ox;
-oy;
-nx=0;
-ny=0;
-dx=0;
-dy=0;
-ody=0;
-odx=0;
-anim=0;
-animf=0;
+PRIVATE
 frames[]=1,2,3,2;
 
 BEGIN
 y++;
 x--;
 graph=frames[0];
-//write_int(0,0,0,0,&p);
-//write_int(0,10,0,0,&dx);
-//write_int(0,20,0,0,&dy);
+
 FRAME(6000);
 
 start = sound(sounds[2],255,255);
 
+LOOP
 
-loop
-if(playing==true || !is_playing_sound(start))
-playing=true;
+    IF(playing==true || !is_playing_sound(start))
+        playing=true;
 
+        ox=x;
+        oy=y;
 
-ox=x;
-oy=y;
+        IF(key(_left))
+            x-=2;
+            nx=-2;
+            ny=0;
+        END
 
-if(key(_left))
-x-=2;
-nx=-2;
-ny=0;
-end
+        IF(key(_right))
+            x+=2;
+            nx=2;
+            ny=0;
+        END
 
-if(key(_right))
-x+=2;
-nx=2;
-ny=0;
+        IF(key(_up))
+            y-=2;
+            ny=-2;
+            nx=0;
+        END
 
-end
+        IF(key(_down))
+            y+=2;
+            ny=2;
+            nx=0;
+        END
 
-if(key(_up))
-y-=2;
-ny=-2;
-nx=0;
-end
+        p=map_get_pixel(file,101,x,y-1);
 
-if(key(_down))
-y+=2;
-ny=2;
-nx=0;
-end
+        IF((x!=ox || y!=oy) && p!=0)
+            dx=nx;
+            dy=ny;
+        ELSE
+            x=ox;
+            y=oy;
+            x=x+dx;
+            y=y+dy;
+            p=map_get_pixel(file,101,x,y-1);
 
-p=map_get_pixel(file,101,x,y-1);
+            IF(p==0 && p!=39)
+                x=ox;
+                y=oy;
+                dx=0;
+                dy=0;
+            END
+        END
 
-if((x!=ox || y!=oy) && p!=0)
-    dx=nx;
-    dy=ny;
-else
-    x=ox;
-    y=oy;
-    x=x+dx;
-    y=y+dy;
-    p=map_get_pixel(file,101,x,y-1);
+    END
 
-    if(p==0 && p!=39)
-        x=ox;
-        y=oy;
-        dx=0;
-        dy=0;
-    end
-end
+    IF(anim++>10)
+        anim=0;
+        animf++;
 
-end
+        IF(animf==4)
+            animf=0;
+        END
 
-if(anim++>10)
-anim=0;
-animf++;
-if(animf==4)
-animf=0;
-end
-graph=frames[animf];
+        graph=frames[animf];
 
-end
+    END
 
-if(collision(type ghost))
-playing=false;
-sound(sounds[3],255,255);
-FROM graph = 4 to 10;
-FRAME(1800);
-END
-signal(type ghost, s_kill);return;
+    IF(collision(type ghost))
+        playing=false;
+        sound(sounds[3],255,255);
 
-end
+        FROM graph = 4 to 10;
+            FRAME(1600);
+        END
 
+        return;
 
-frame;
-
-end
+    END
 
 
+    FRAME;
 
 END
+
+END
+
+
 
 PROCESS ghost(x,y,gid);
 
-private
-anim=0;
-dx=1;
-dy=0;
-ox=0;
-oy=0;
-px=0;
-py=0;
-p=0;
-
 BEGIN
-
+    dx=1;
     graph=30;
 
-    loop
+    LOOP
 
-    if(playing)
+    IF(playing)
         p = map_get_pixel(file,101,x,y-1);
-       // if(p==39)
-       //     x++;
-      //  end
 
-        if(p==54)
+        IF(p==54)
             ox=dx;
             oy=dy;
             dx=0;
             dy=0;
-        end
+        END
 
-        while(dx==0 && dy==0)
-        switch(rand(0,4))
-            case 0:
-                dx=1;
-            end
-            case 1:
-                dx=-1;
-            end
-            case 2:
-                dy=1;
-            end
-            case 3:
-                dy=-1;
-            end
-        end
+        WHILE(dx==0 && dy==0)
 
-            if(map_get_pixel(file,101,x+dx,y-1+dy)!=22)
+            SWITCH(rand(0,4))
+                CASE 0:
+                    dx=1;
+                END
+
+                CASE 1:
+                    dx=-1;
+                END
+
+                CASE 2:
+                    dy=1;
+                END
+
+                CASE 3:
+                    dy=-1;
+                END
+            END
+
+            IF(map_get_pixel(file,101,x+dx,y-1+dy)!=22)
                 dx=0;
                 dy=0;
-            end
-            if(dx==-ox && dy==-oy)
+            END
+
+            IF(dx==-ox && dy==-oy)
                 dx=0;
                 dy=0;
-            end
+            END
 
-        end
+        END
 
         ox=x;
         oy=y;
 
         x=x+dx;
         y=y+dy;
-        //if(map_get_pixel(file,101,x,y-1)
-        //if(map_get_pixel(file,101,x,y-1)==0)
-        //    x=ox;
-        //    y=oy;
-        //end
-        //
 
+    END
 
-        //END
+    IF(y<-20)
+        y+=200;
+    END
 
-    end
-    if(y<-20)
-    y+=200;
-    end
-    if(y>200)
-    y-=200;
-    end
+    IF(y>200)
+        y-=200;
+    END
 
-    if(anim++>10)
+    IF(anim++>10)
         anim=0;
         graph++;
 
-        if(graph==34)
+        IF(graph==34)
             graph=30;
-        end
-    end
+        END
+    END
+
     size=100*(gid==gactive);
-    frame;
+
+    FRAME;
 
 END
 
 END
+
+
 
 PROCESS wafer(x,y)
 
@@ -315,7 +313,7 @@ BEGIN
 
         FRAME;
 
-    until (player.y-1==y && abs(player.x-(x+4))<5)
+    UNTIL (player.y-1==y && abs(player.x-(x+4))<5)
 
     sound(sounds[0],255,255);
 
@@ -330,14 +328,13 @@ PROCESS powerpill(x,y)
 BEGIN
 graph=21;
 
-repeat
+REPEAT
 
-size=100*((timer/20)&1);
+    size=100*((timer/20)&1);
 
-frame;
+    FRAME;
 
-until(abs(x-player.x)<2 && abs(y-player.y)<2)
-//collision(player));
+UNTIL(abs(x-player.x)<2 && abs(y-player.y)<2)
 
 sound(sounds[1],255,255);
 score+=10;
@@ -345,16 +342,18 @@ score+=10;
 
 END
 
+
+
 PROCESS bonus(x,y)
 
 BEGIN
 
 graph=22;
 
-loop
+LOOP
 
-frame;
+    FRAME;
 
-end
+END
 
 END
