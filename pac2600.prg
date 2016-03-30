@@ -68,6 +68,11 @@ LOOP
 
     signal(type maze, s_kill_tree);
 
+    if(powertime>0)
+        stop_sound(powersound);
+        powertime=0;
+    end
+
 END
 
 END
@@ -179,7 +184,7 @@ LOOP
 
         p=map_get_pixel(file,101,x,y-1);
 
-        IF((x!=ox || y!=oy) && p!=0)
+        IF((x!=ox || y!=oy) && p!=0 & p!=39)
             dx=nx;
             dy=ny;
         ELSE
@@ -189,7 +194,7 @@ LOOP
             y=y+dy;
             p=map_get_pixel(file,101,x,y-1);
 
-            IF(p==0 && p!=39)
+            IF(p==0 || p==39)
                 x=ox;
                 y=oy;
                 dx=0;
@@ -272,14 +277,6 @@ BEGIN
 
     dx=1;
     graph=30;
-   // eyes=1;
-    write_int(0,0,gid*10,0,&homex);
-    write_int(0,30,gid*10,0,&homey);
-    write_int(0,60,gid*10,0,&dx);
-    write_int(0,90,gid*10,0,&dy);
-    write_int(0,120,gid*10,0,&x);
-    write_int(0,150,gid*10,0,&y);
-    write_int(0,180,gid*10,0,&try1);
 
 
     LOOP
@@ -301,11 +298,7 @@ BEGIN
             end
 
             WHILE(dx==0 && dy==0)
-               // if(eyes && try1>0)
-               //     sw=try1-1;
-             //   else
-                    sw=rand(0,3);
-             //   end
+
                 IF(eyes && try1>0)
                     switch(try1)
 
@@ -338,6 +331,9 @@ BEGIN
                     end
 
                 ELSE
+
+                sw=rand(0,3);
+
                 SWITCH(sw)
 
                     CASE 0:
@@ -358,7 +354,6 @@ BEGIN
 
                     CASE 2:
                         if(homey>y && try1>0 )
-                       // debug;
                             dy=1;
                         else
                             dy=1;
@@ -376,9 +371,9 @@ BEGIN
                 END
                 END
 
-                if(dx==0 && dy==0)
-                   debug;
-                ELSE
+                if(dx!=0 || dy!=0)
+
+
 
                 IF(map_get_pixel(file,101,x+dx,y-1+dy)==0)
                     dx=0;
@@ -491,7 +486,7 @@ sound(sounds[1],255,255);
 score+=10;
 
 powersound=sound(sounds[4],255,255);
-powertime=400;
+powertime=600;
 
 
 END
