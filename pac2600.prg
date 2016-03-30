@@ -13,6 +13,8 @@ global sounds[10];
 player=0;
 start=0;
 playing=false;
+score=0;
+gactive=0;
 
 BEGIN
 
@@ -20,17 +22,24 @@ load_fpg("pac2600.fpg");
 sounds[0]=load_wav("sounds/CHOMP.wav",0);
 sounds[1]=load_wav("sounds/BOOP.wav",0);
 sounds[2]=load_wav("sounds/START.wav",0);
+sounds[3]=load_wav("sounds/DEATH.wav",0);
 
 put_screen(file,100);
 set_fps(60,0);
 LOOP
+playing=false;
 maze();
 frame;
 
 WHILE(get_id(type wafer) || get_id(type powerpill))
 FRAME;
+gactive++;
+if(gactive==4)
+gactive=0;
+end
 
 END
+signal(type maze, s_kill_tree);
 
 end
 
@@ -61,13 +70,27 @@ get_point(file,101,x,&px,&py);
 powerpill(px,py);
 end
 
+LOOP
+
 get_point(file,101,5,&px, &py);
 player=pac(px,py);
 
 get_point(file,101,7,&px, &py);
 from x = 1 to 4;
-ghost(px,py);
+ghost(px,py,x-1);
 end
+
+
+while(get_id(type pac))
+FRAME;
+END
+
+//get_point(file,101,5,&px, &py);
+//player=pac(px,py);
+signal(type ghost, s_kill);
+signal(type pac, s_kill);
+
+END
 
 
 END
@@ -94,9 +117,10 @@ BEGIN
 y++;
 x--;
 graph=frames[0];
-write_int(0,0,0,0,&p);
-write_int(0,10,0,0,&dx);
-write_int(0,20,0,0,&dy);
+//write_int(0,0,0,0,&p);
+//write_int(0,10,0,0,&dx);
+//write_int(0,20,0,0,&dy);
+FRAME(6000);
 
 start = sound(sounds[2],255,255);
 
@@ -136,7 +160,7 @@ end
 
 p=map_get_pixel(file,101,x,y-1);
 
-if((x!=ox || y!=oy) && p==22)
+if((x!=ox || y!=oy) && p!=0)
     dx=nx;
     dy=ny;
 else
@@ -146,7 +170,7 @@ else
     y=y+dy;
     p=map_get_pixel(file,101,x,y-1);
 
-    if(p!=22)
+    if(p==0 && p!=39)
         x=ox;
         y=oy;
         dx=0;
@@ -166,6 +190,17 @@ graph=frames[animf];
 
 end
 
+if(collision(type ghost))
+playing=false;
+sound(sounds[3],255,255);
+FROM graph = 4 to 10;
+FRAME(1800);
+END
+signal(type ghost, s_kill);return;
+
+end
+
+
 frame;
 
 end
@@ -174,14 +209,99 @@ end
 
 END
 
-PROCESS ghost(x,y);
+PROCESS ghost(x,y,gid);
+
+private
+anim=0;
+dx=1;
+dy=0;
+ox=0;
+oy=0;
+px=0;
+py=0;
+p=0;
 
 BEGIN
 
-graph=30;
-loop
-frame;
-end
+    graph=30;
+
+    loop
+
+    if(playing)
+        p = map_get_pixel(file,101,x,y-1);
+       // if(p==39)
+       //     x++;
+      //  end
+
+        if(p==54)
+            ox=dx;
+            oy=dy;
+            dx=0;
+            dy=0;
+        end
+
+        while(dx==0 && dy==0)
+        switch(rand(0,4))
+            case 0:
+                dx=1;
+            end
+            case 1:
+                dx=-1;
+            end
+            case 2:
+                dy=1;
+            end
+            case 3:
+                dy=-1;
+            end
+        end
+
+            if(map_get_pixel(file,101,x+dx,y-1+dy)!=22)
+                dx=0;
+                dy=0;
+            end
+            if(dx==-ox && dy==-oy)
+                dx=0;
+                dy=0;
+            end
+
+        end
+
+        ox=x;
+        oy=y;
+
+        x=x+dx;
+        y=y+dy;
+        //if(map_get_pixel(file,101,x,y-1)
+        //if(map_get_pixel(file,101,x,y-1)==0)
+        //    x=ox;
+        //    y=oy;
+        //end
+        //
+
+
+        //END
+
+    end
+    if(y<-20)
+    y+=200;
+    end
+    if(y>200)
+    y-=200;
+    end
+
+    if(anim++>10)
+        anim=0;
+        graph++;
+
+        if(graph==34)
+            graph=30;
+        end
+    end
+    size=100*(gid==gactive);
+    frame;
+
+END
 
 END
 
@@ -193,12 +313,13 @@ BEGIN
 
     REPEAT
 
-FRAME;
+        FRAME;
 
-until (player.y-1==y && abs(player.x-(x+4))<5)
+    until (player.y-1==y && abs(player.x-(x+4))<5)
 
-sound(sounds[0],255,255);
+    sound(sounds[0],255,255);
 
+    score++;
 
 END
 
@@ -219,6 +340,7 @@ until(abs(x-player.x)<2 && abs(y-player.y)<2)
 //collision(player));
 
 sound(sounds[1],255,255);
+score+=10;
 
 
 END
