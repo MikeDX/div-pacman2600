@@ -24,6 +24,8 @@ lives=0;
 ghostpoints=0;
 res=-1;
 cart=0;
+pacspeed=2;
+ghostspeed=1;
 
 local
 p=0;
@@ -55,6 +57,8 @@ end
 graph=0;
 
 load_fpg("pac2600.fpg");
+load_pal("pac2600.fpg");
+
 fade(100,100,100,10);
 define_region(1,0,0,320,168);
 
@@ -110,7 +114,9 @@ LOOP
         stop_sound(powersound);
         powertime=0;
     end
-
+    if(lives<9)
+        lives++;
+    end
 END
 
 END
@@ -138,6 +144,10 @@ FROM x = 1 to 4;
     powerpill(px,py);
 end
 
+    get_point(file,101,6,&px,&py);
+    bonus(px,py);
+
+
 LOOP
 
     // position pacman
@@ -156,7 +166,7 @@ LOOP
     END
 
     if(demo)
-    frame(6000);
+    frame(10000);
     playing=true;
     end
 
@@ -165,8 +175,9 @@ LOOP
     WHILE(get_id(type pac) || demo)
 
         if(demo)
-            roll_palette(1,254,rand(0,255));
             frame(10000);
+
+            roll_palette(1,254,rand(0,255));
         else
             FRAME;
         end
@@ -177,7 +188,7 @@ LOOP
     signal(type pac, s_kill);
 
     lives--;
-    if(lives<0)
+    if(lives<1)
         demo=1;
     end
 END
@@ -211,30 +222,27 @@ LOOP
 
         ox=x;
         oy=y;
-
         IF(key(_left))
-            x-=2;
-            nx=-2;
+            nx=-pacspeed;
             ny=0;
         END
 
         IF(key(_right))
-            x+=2;
-            nx=2;
+            nx=pacspeed;
             ny=0;
         END
 
         IF(key(_up))
-            y-=2;
-            ny=-2;
             nx=0;
+            ny=-pacspeed;
         END
 
         IF(key(_down))
-            y+=2;
-            ny=2;
+            ny=pacspeed;
             nx=0;
         END
+        x+=nx;
+        y+=ny;
 
         p=map_get_pixel(file,101,x,y-1);
         IF((x!=ox || y!=oy) && p!=0 && p!=39 && y>2 && y<200)
@@ -270,6 +278,14 @@ LOOP
         END
 
     END
+
+    if(dx!=0 && dx!=ox)
+        if(dx<0)
+            flags=1;
+        else
+            flags=0;
+        end
+    end
 
     IF(anim++>10)
         anim=0;
@@ -315,7 +331,13 @@ LOOP
             END
             FRAME;
             END
+
             sound(sounds[6],255,255);
+
+            if(ghostpoints>160)
+                stop_sound(powersound);
+            end
+
             playing=true;
 
         END
@@ -571,11 +593,27 @@ PROCESS bonus(x,y)
 
 BEGIN
 
-graph=22;
+graph=0;
 
 LOOP
+    if(graph==0)
+        if(rand(0,1000)==0)
+            graph=22;
+        end
+    else
 
-    FRAME;
+
+        if(collision(type pac))
+            if(abs(x-player.x)<5)
+                score+=100;
+                sound(sounds[1],255,255);
+                graph=0;
+            end
+        end
+
+    end
+
+    frame;
 
 END
 
