@@ -17,7 +17,10 @@ score=0;
 gactive=0;
 powertime=0;
 powersound=0;
-
+numghosts=4;
+flicker=1;
+demo=1;
+lives=0;
 local
 p=0;
 ox=0;
@@ -44,6 +47,9 @@ sounds[6]=load_wav("sounds/WHISTLE.wav",0);
 
 put_screen(file,100);
 set_fps(60,0);
+write_int(0,160,180,5,&score);
+write_int(0,0,180,3,&lives);
+
 LOOP
     playing=false;
     maze();
@@ -64,6 +70,16 @@ LOOP
                 stop_sound(powersound);
             END
         END
+        if(key(_enter) && demo==true)
+            load_pal("pac2600.fpg");
+            demo=false;
+            playing=false;
+            score=0;
+            lives=3;
+            signal(type maze, s_kill_tree);
+            maze();
+        end
+
     END
 
     signal(type maze, s_kill_tree);
@@ -87,13 +103,13 @@ py;
 
 
 BEGIN
-
+/*
 signal(type ghost, s_kill);
 signal(type wafer, s_kill);
 signal(type powerpill, s_kill);
 signal(type pac, s_kill);
 signal(type bonus, s_kill);
-
+*/
 // setup wafers
 FROM x = 9 to 134;
     get_point(file,101,x,&px, &py);
@@ -109,24 +125,45 @@ end
 LOOP
 
     // position pacman
+    if(!demo)
     get_point(file,101,5,&px, &py);
     player=pac(px,py);
+    else
+    player=id;
+    end
 
     // position ghosts
     get_point(file,101,7,&px, &py);
 
-    FROM x = 1 to 4;
+    for( x = 1 ;x<=numghosts;x++);
         ghost(px,py,x-1);
     END
 
+    if(demo)
+    frame(6000);
+    playing=true;
+    end
 
-    WHILE(get_id(type pac))
-        FRAME;
+    frame;
+
+    WHILE(get_id(type pac) || demo)
+
+        if(demo)
+            roll_palette(1,254,rand(0,255));
+            frame(10000);
+        else
+            FRAME;
+        end
+
     END
 
     signal(type ghost, s_kill);
     signal(type pac, s_kill);
-
+    debug;
+    lives--;
+    if(lives<0)
+        demo=1;
+    end
 END
 
 
@@ -374,8 +411,8 @@ BEGIN
                 if(dx!=0 || dy!=0)
 
 
-
-                IF(map_get_pixel(file,101,x+dx,y-1+dy)==0)
+                p=map_get_pixel(file,101,x+dx,y-1+dy);
+                IF(p==0 || (!eyes && p==39 && dx==-1) )
                     dx=0;
                     dy=0;
                 END
@@ -429,7 +466,9 @@ BEGIN
             graph=34;
         END
 
-        size=100*(gid==gactive);
+        if(flicker)
+            size=100*(gid%4==gactive);
+        end
 
         IF(powertime>0)
             graph+=10;
