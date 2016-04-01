@@ -8,8 +8,14 @@ Started: 29/03/2015 20:26
 
 ***/
 program pac2600;
-
+const
+redpath=82;
+bluepath=156;
+greenpath=214;
 global sounds[10];
+ghostcol[4]=209,110,121,122;
+
+
 player=0;
 start=0;
 playing=false;
@@ -25,8 +31,12 @@ ghostpoints=0;
 res=-1;
 cart=0;
 pacspeed=2;
-ghostspeed=1;
+ghostspeed=2;
+ghostfpg[4];
 
+new_palette[255];
+numfpg;
+numfnt;
 local
 p=0;
 ox=0;
@@ -42,7 +52,7 @@ animf=0;
 eyes=false;
 BEGIN
 
-
+numfnt=load_fnt("atarinum.fnt");
 cart=load_map("gfx/cart.pcx");
 graph=cart;
 x=160;
@@ -71,10 +81,16 @@ sounds[5]=load_wav("sounds/BUP_BWOOP.wav",0);
 sounds[6]=load_wav("sounds/WHISTLE.wav",0);
 set_mode(320200);
 
-put_screen(file,100);
 set_fps(60,0);
-write_int(0,160,180,5,&score);
+//x=198;
+//    y=177;
+
+write_int(numfnt,205,176,5,&score);
 write_int(0,0,180,3,&lives);
+//showscore();
+from x = 0 to 4;
+ghostfpg[x]=load_fpg("ghost.fpg");
+end
 
 LOOP
     playing=false;
@@ -92,7 +108,7 @@ LOOP
         IF(powertime>0)
             powertime--;
 
-            IF(powertime==0)
+            IF(powertime<=120)
                 stop_sound(powersound);
             END
         END
@@ -149,6 +165,7 @@ end
 
 
 LOOP
+    put_screen(file,100);
 
     // position pacman
     if(!demo)
@@ -245,7 +262,7 @@ LOOP
         y+=ny;
 
         p=map_get_pixel(file,101,x,y-1);
-        IF((x!=ox || y!=oy) && p!=0 && p!=39 && y>2 && y<200)
+        IF((x!=ox || y!=oy) && p!=0 && p!=greenpath && y>2 && y<200)
             dx=nx;
             dy=ny;
         ELSE
@@ -267,7 +284,7 @@ LOOP
 
             else
 
-            IF(p==0 || p==39)
+            IF(p==0 || p==greenpath)
                 x=ox;
                 y=oy;
                 dx=0;
@@ -334,10 +351,6 @@ LOOP
 
             sound(sounds[6],255,255);
 
-            if(ghostpoints>160)
-                stop_sound(powersound);
-            end
-
             playing=true;
 
         END
@@ -359,64 +372,84 @@ PROCESS ghost(x,y,gid);
 private
 homex=0;
 homey=0;
-
+targetx=0;
+targety=0;
+gfile=0;
 ograph=0;
 try1=0;
 sw=0;
 BEGIN
     homex=x;
     homey=y;
+    gfile=ghostfpg[gid];
+
+    file=gfile;
+    from x = 0 to 255;
+    new_palette[x]=x;
+    end
+    new_palette[179]=ghostcol[gid];
+    from x = 1 to 4;
+    convert_palette(file,x,&new_palette);
+    end
+
+    x=homex;
 
     dx=1;
-    graph=30;
+    graph=1;
 
     resolution=res;
     region=1;
+//    write_int(0,0,gid*20,0,&targetx);
+//    write_int(0,40,gid*20,0,&targety);
 
     LOOP
+        if(powertime<1 && eyes==0)
+        file=gfile;
+        else
+        file=0;
+        end
+        IF(playing || eyes)
+            p = map_get_pixel(0,101,x,y-1);
 
-        IF(playing)
-            p = map_get_pixel(file,101,x,y-1);
-
-            IF(p==54)
+            IF(p==bluepath)
                 ox=dx;
                 oy=dy;
                 dx=0;
                 dy=0;
             END
 
-            if(eyes)
+        //    if(eyes)
                 try1=4;
-            else
-                try1=0;
-            end
+        //    else
+        //        try1=0;
+        //    end
 
             WHILE(dx==0 && dy==0)
 
-                IF(eyes && try1>0)
+                IF(try1>0 && ( eyes || rand(0,gid)==gid))
                     switch(try1)
 
                     case 1:
-                    IF(homex>x)
+                    IF(targetx>x)
                         dx=1;
                     END
                     end
 
                     case 2:
-                    if(homex<x && dx==0)
+                    if(targetx<x && dx==0)
                         dx=-1;
                     END
                     end
 
                     case 3:
-                    if(homey<y && dx==0)
+                    if(targety<y && dx==0)
                         dy=-1;
                     END
                     end
 
                     case 4:
 
-                    if(homey>y && dx==0 && dy==0)
+                    if(targety>y && dx==0 && dy==0)
                         dy=1;
                     END
 
@@ -431,36 +464,20 @@ BEGIN
                 SWITCH(sw)
 
                     CASE 0:
-                        if(homex>x && try1>0)
-                            dx=1;
-                        else
-                            dx=1;
-                        end
+                        dx=1;
                     END
 
                     CASE 1:
-                        if(homex<x && try1>0)
-                            dx=-1;
-                        else
-                            dx=-1;
-                        end
+                        dx=-1;
                     END
 
                     CASE 2:
-                        if(homey>y && try1>0 )
-                            dy=1;
-                        else
-                            dy=1;
-                        end
+                        dy=1;
                     END
 
 
                     CASE 3:
-                        if(homey<y && try1>0)
-                            dy=-1;
-                        else
-                            dy=-1;
-                        end
+                        dy=-1;
                     END
                 END
                 END
@@ -468,8 +485,8 @@ BEGIN
                 if(dx!=0 || dy!=0)
 
 
-                p=map_get_pixel(file,101,x+dx,y-1+dy);
-                IF(p==0 || (!eyes && p==39 && dx==-1) )
+                p=map_get_pixel(0,101,x+dx,y-1+dy);
+                IF(p==0 || (!eyes && p==greenpath && dx==-1) )
                     dx=0;
                     dy=0;
                 END
@@ -512,26 +529,49 @@ BEGIN
             anim=0;
             graph++;
 
-            IF(graph==34)
-                graph=30;
+            IF(graph==5)
+                graph=1;
             END
         END
 
         ograph=graph;
 
         IF(eyes==true)
-            graph=34;
+            graph=5;
+         //   file=1;
         END
 
         if(flicker)
             size=100*(gid%4==gactive);
+      //  else
+       //     flags=4;
         end
 
-        IF(powertime>0)
+        IF(powertime>120)
             graph+=10;
         END
+        if(powertime>0 || eyes)
+            graph+=29;
+        end
+        if(!eyes)
+        if(powertime>0)
+            targetx=320*(gid==0 || gid ==2 );
+            targety=200*(gid==0 || gid ==3 );
+        else
+
+           targetx=player.x;
+           targety=player.y;
+        end
+
+        else
+           targetx=homex;
+           targety=homey;
+        end
+
+
 
         FRAME;
+        //(100/(1+eyes));
 
         graph=ograph;
 
@@ -550,9 +590,7 @@ BEGIN
     graph=20;
     resolution = res;
     REPEAT
-
         FRAME;
-
     UNTIL (player.y-1==y && abs(player.x-(x+4))<5)
 
     sound(sounds[0],255,255);
@@ -583,6 +621,10 @@ score+=5;
 ghostpoints=20;
 powersound=sound(sounds[4],255,255);
 powertime=600;
+while((x=get_id(type ghost)))
+x.dx=-x.dx;
+x.dy=-x.dy;
+end
 
 
 END
@@ -618,3 +660,51 @@ LOOP
 END
 
 END
+
+process showscore()
+private
+tscore=0;
+nscore=0;
+
+BEGIN
+
+numfpg=load_fpg("number.fpg");
+   write_int(0,0,0,0,&tscore);
+
+    from x = 0 to 255;
+    new_palette[x]=x;
+    end
+
+    new_palette[201]=1;//ghostcol[gid];
+    new_palette[254]=252;
+
+    from x = 10 to 19;
+    convert_palette(numfpg,x,&new_palette);
+    end
+
+    file=numfpg;
+
+    graph=10;
+
+
+    loop
+    x=198;
+    y=177;
+    tscore=score;
+    nscore=tscore;
+    while(tscore>0)
+    nscore=tscore%10;
+
+    if(tscore>0 || x==198)
+  //  debug;
+    xput(file,nscore+10,x,y,angle,100,0,0);
+    end
+    x-=16;
+   // tscore-=nscore;
+    tscore=tscore/10;
+    end
+
+    frame;
+    end
+end
+
